@@ -1,6 +1,6 @@
+from datetime import datetime
 import pyautogui as pg
 from Xlib import display
-import ewmh
 import cv2
 import numpy as np
 from utils import find_letters
@@ -36,6 +36,8 @@ print("window size is "+ str(window_geometry))
 def get_all_region():
     screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
     all_region = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+    # save screenshot 
+    # cv2.imwrite(f'all_region_{datetime.now()}.png', all_region)
     return all_region
 def get_input_region():
     screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
@@ -56,7 +58,7 @@ def play_level():
 
     letters = []
     print("Finding letters...")
-    letter_delay = 0.2
+    letter_delay = 0.05
     submit_delay = 1
     
 
@@ -65,14 +67,15 @@ def play_level():
             # check if file exist
             open('letters/'+char+'.png')
             template = cv2.imread('letters/'+char+'.png')
-            locs = find_letters(template, input_region, 0.975)
+
+            locs = find_letters(template, input_region, 0.79, offset=5)
             for loc in locs:
                 letters.append((char, loc))
         except Exception as e:
             pass
     result = solve("".join([letter[0].lower() for letter in letters]))
-    print(result)
-    sleep(0.5)
+    result.sort(key=len, reverse=True)
+    print("".join([letter[0] for letter in letters]), len(result))
     for word in result:
         dup_letters = letters.copy()
         for char in word:
@@ -85,23 +88,83 @@ def play_level():
                     break 
     # find submit button
         submitted = False
+        counter = 5
         while not submitted:
-            submit_template = cv2.imread('letters/submit.png')
-            submit_locs = find_letters(submit_template, input_region)
+            input_region = get_input_region()
+            if counter == 0:
+                break
+            submit_template = cv2.imread('letters/!attack.png')
+            submit_locs = find_letters(submit_template, input_region, offset=5)
             if len(submit_locs) > 0:
                 submit_loc = submit_locs[0]
                 print("Submitted word: "+word)
                 pg.moveTo(submit_loc[0] + window_geometry['x'], submit_loc[1] + window_geometry['y'], letter_delay)
                 pg.click()
                 submitted = True
+            sleep(0.25)
+            counter -= 1
+        done = False
+        while not submitted:
+            submit_template = cv2.imread('letters/!reset.png')
+            submit_locs = find_letters(submit_template, input_region, offset=5)
+            if len(submit_locs) > 0:
+                submit_loc = submit_locs[0]
+                print("Submitted word: "+word)
+                pg.moveTo(submit_loc[0] + window_geometry['x'], submit_loc[1] + window_geometry['y'], letter_delay)
+                pg.click()
+                submitted = True
+            
+            screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
+            all_region = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 
-        sleep(len(word)*0.22 + 0.3)
+
+
+            ok_template = cv2.imread('letters/!next_level.png')
+            ok_locs = find_letters(ok_template, all_region)
+            if len(ok_locs) > 0:
+                ok_loc = ok_locs[0]
+                print("Done!")
+                pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], letter_delay)
+                pg.click()
+        
+            ok_template = cv2.imread('letters/!ok.png')
+            ok_locs = find_letters(ok_template, all_region)
+            if len(ok_locs) > 0:
+                ok_loc = ok_locs[0]
+                print("Done!")
+                pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], letter_delay)
+                pg.click()
+            
+            # check if done by finding next button
+            next_template = cv2.imread('letters/!play.png')
+            next_locs = find_letters(next_template, all_region)
+            if len(next_locs) > 0:
+                next_loc = next_locs[0]
+                print("Done!")
+                pg.moveTo(next_loc[0] + window_geometry['x'], next_loc[1] + window_geometry['y'], letter_delay)
+                pg.click()
+                done = True
+                break
+        
+        if done:
+            break
+
+
+        sleep(len(word)*0.22)
     
         screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
         all_region = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 
     # check if done by finding ok button
-        ok_template = cv2.imread('letters/OK.png')
+        ok_template = cv2.imread('letters/!next_level.png')
+        ok_locs = find_letters(ok_template, all_region)
+        if len(ok_locs) > 0:
+            ok_loc = ok_locs[0]
+            print("Done!")
+            pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], letter_delay)
+            pg.click()
+        
+        ok_template = cv2.imread('letters/!ok.png')
         ok_locs = find_letters(ok_template, all_region)
         if len(ok_locs) > 0:
             ok_loc = ok_locs[0]
@@ -110,8 +173,9 @@ def play_level():
             pg.click()
         
 
+
         # check if done by finding next button
-        next_template = cv2.imread('letters/next_level.png')
+        next_template = cv2.imread('letters/!play.png')
         next_locs = find_letters(next_template, all_region)
         if len(next_locs) > 0:
             next_loc = next_locs[0]
@@ -120,6 +184,7 @@ def play_level():
             pg.click()
             break
     else:
+        print("done by loop, waiting for button")
     # check if done by finding ok button
         count = 0
         while 1:
@@ -127,7 +192,16 @@ def play_level():
                 raise("Cannot find OK button")
             count += 1
             all_region = get_all_region()            
-            ok_template = cv2.imread('letters/OK.png')
+            ok_template = cv2.imread('letters/!next_level.png')
+            ok_locs = find_letters(ok_template, all_region)
+            if len(ok_locs) > 0:
+                ok_loc = ok_locs[0]
+                print("Done!")
+                pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], letter_delay)
+                pg.click()
+        
+            all_region = get_all_region()            
+            ok_template = cv2.imread('letters/!ok.png')
             ok_locs = find_letters(ok_template, all_region)
             if len(ok_locs) > 0:
                 ok_loc = ok_locs[0]
@@ -136,8 +210,9 @@ def play_level():
                 pg.click()
         
 
+
         # check if done by finding next button
-            next_template = cv2.imread('letters/next_level.png')
+            next_template = cv2.imread('letters/!play.png')
             next_locs = find_letters(next_template, all_region)
             if len(next_locs) > 0:
                 next_loc = next_locs[0]
@@ -157,7 +232,7 @@ if __name__ == "__main__":
             print("Waiting for level...")
             while 1:
                 all_region = get_all_region()
-                check_template = cv2.imread('letters/submit.png')
+                check_template = cv2.imread('letters/!check.png')
                 check_locs = find_letters(check_template, all_region)
                 if len(check_locs) > 0:
                     check_loc = check_locs[0]

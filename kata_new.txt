@@ -1,4 +1,5 @@
 bali
+kos
 garis
 aba
 abad
