@@ -8,6 +8,7 @@ from time import sleep
 from PIL import Image
 from solver import solve
 
+
 def get_window_info_by_title(title):
     display_obj = display.Display()
     root = display_obj.screen().root
@@ -45,7 +46,7 @@ def get_input_region():
     return input_region
 
 
-# save input region screenshot
+letter_delay = 0.05
 def play_level():
     all_region = get_all_region()
     input_region = get_input_region()
@@ -56,8 +57,7 @@ def play_level():
 
     letters = []
     print("Finding letters...")
-    letter_delay = 0.2
-    submit_delay = 1
+    submit_delay = 0.25
     
 
     for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
@@ -71,8 +71,7 @@ def play_level():
         except Exception as e:
             pass
     result = solve("".join([letter[0].lower() for letter in letters]))
-    print(result)
-    sleep(0.5)
+    print("".join([x[0] for x in letters]), len(result))
     for word in result:
         dup_letters = letters.copy()
         for char in word:
@@ -85,41 +84,47 @@ def play_level():
                     break 
     # find submit button
         submitted = False
+        done = False
         while not submitted:
+            input_region = get_input_region()
             submit_template = cv2.imread('letters/submit.png')
             submit_locs = find_letters(submit_template, input_region)
             if len(submit_locs) > 0:
                 submit_loc = submit_locs[0]
-                print("Submitted word: "+word)
+                print(word, end=" ")
                 pg.moveTo(submit_loc[0] + window_geometry['x'], submit_loc[1] + window_geometry['y'], letter_delay)
                 pg.click()
                 submitted = True
-
-        sleep(len(word)*0.22 + 0.3)
-    
-        screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
-        all_region = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-
+                sleep(0.1)
+            
+            all_region = get_all_region()
     # check if done by finding ok button
-        ok_template = cv2.imread('letters/OK.png')
-        ok_locs = find_letters(ok_template, all_region)
-        if len(ok_locs) > 0:
-            ok_loc = ok_locs[0]
-            print("Done!")
-            pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], letter_delay)
-            pg.click()
+            ok_template = cv2.imread('letters/OK.png')
+            ok_locs = find_letters(ok_template, all_region)
+            if len(ok_locs) > 0:
+                ok_loc = ok_locs[0]
+                print("Done!")
+                pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], letter_delay)
+                pg.click()
         
 
         # check if done by finding next button
-        next_template = cv2.imread('letters/next_level.png')
-        next_locs = find_letters(next_template, all_region)
-        if len(next_locs) > 0:
-            next_loc = next_locs[0]
-            print("Done!")
-            pg.moveTo(next_loc[0] + window_geometry['x'], next_loc[1] + window_geometry['y'], letter_delay)
-            pg.click()
+            next_template = cv2.imread('letters/next_level.png')
+            next_locs = find_letters(next_template, all_region)
+            if len(next_locs) > 0:
+                next_loc = next_locs[0]
+                print("Done!")
+                pg.moveTo(next_loc[0] + window_geometry['x'], next_loc[1] + window_geometry['y'], letter_delay)
+                pg.click()
+                done = True
+                break
+
+        if done:
             break
+        sleep(len(word)*0.22 + 0.3)
+    
     else:
+        print("done by loop")
     # check if done by finding ok button
         count = 0
         while 1:
@@ -164,12 +169,33 @@ if __name__ == "__main__":
                     print("Check!")
                     pg.moveTo(check_loc[0] + window_geometry['x'], check_loc[1] + window_geometry['y'], 0.2)
                     break
-                sleep(1)
-        except Exception as e:
-            print(e)
-            sleep(1)
+
+                ok_template = cv2.imread('letters/OK.png')
+                ok_locs = find_letters(ok_template, all_region)
+                if len(ok_locs) > 0:
+                    ok_loc = ok_locs[0]
+                    print("Done!")
+                    pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], letter_delay)
+                    pg.click()
+        
+
+        # check if done by finding next button
+                next_template = cv2.imread('letters/next_level.png')
+                next_locs = find_letters(next_template, all_region)
+                if len(next_locs) > 0:
+                    next_loc = next_locs[0]
+                    print("Done!")
+                    pg.moveTo(next_loc[0] + window_geometry['x'], next_loc[1] + window_geometry['y'], letter_delay)
+                    sleep(0.5)
+                    pg.click()
+
+                sleep(0.5)
         
         except pg.FailSafeException:
             print("Failsafe exception")
             break
+
+        except Exception as e:
+            print(e)
+            
         

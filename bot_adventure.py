@@ -90,7 +90,7 @@ def play_level():
         submitted = False
         counter = 5
         while not submitted:
-            input_region = get_input_region()
+            input_region = get_all_region()
             if counter == 0:
                 break
             submit_template = cv2.imread('letters/!attack.png')
