@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-def find_letters(template, img_rgb, threshold=0.9, offset = 0):
+def find_letters(template, img_rgb, threshold=0.9, offset = 0, method = cv2.TM_CCOEFF_NORMED):
     w,h = template.shape[:-1]
     res = cv2.matchTemplate(img_rgb, template, cv2.TM_CCOEFF_NORMED)
     loc = np.where(res >= threshold)    
@@ -36,11 +36,16 @@ if __name__ == "__main__":
     # cv2.waitKey(0)
     # print(locs)
 
-    template = cv2.imread('letters/!ok.png')
-    img_rgb = cv2.imread('aaa.png')
-    for loc in find_letters(template, img_rgb):
-        cv2.rectangle(img_rgb, loc, (loc[0]+template.shape[1], loc[1]+template.shape[0]), (0,255,0), 2)
-    
+    from bot import get_all_region
+    template = cv2.imread('letters/25.png')
+    img_rgb = get_all_region()
+    i = 0
+    for loc in find_letters(template, img_rgb, 0.97):
+        i += 1
+        # create dot at center of letter
+        cv2.circle(img_rgb, loc, 3, (0,0,255), 2)
+
+    print(i) 
     cv2.imshow('result', img_rgb)
     cv2.waitKey(0)
 
