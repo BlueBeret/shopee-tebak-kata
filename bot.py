@@ -1,6 +1,5 @@
 import pyautogui as pg
 from Xlib import display
-import ewmh
 import cv2
 import numpy as np
 from utils import find_letters

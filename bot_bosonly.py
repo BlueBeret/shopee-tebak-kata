@@ -8,8 +8,9 @@ from utils import find_letters
 from time import sleep
 from PIL import Image
 from solver import solve
+from itertools import cycle
 
-LETTER_DELAY = 0.05
+LETTER_DELAY = 0.01
 
 def log(log_msg, *args, **kwargs):
     print("[+]", log_msg, *args, **kwargs)
@@ -55,9 +56,11 @@ def get_input_region():
 LEVEL_BOSS = {
     15 : [6, 10, 0.97],
     20 : [8, 10, 0.99],
-    25 : [25, 15, 0.97],
+    25 : [25, 15, 0.99],
     30 : [30, 10, 0.99]
 }
+
+level_cycle = cycle([15, 20, 25, 30])
 
 def wait_for_level():
     while 1:
@@ -78,13 +81,13 @@ def open_boss_level(level):
 
     while len(find_letters(template, img_rgb, 0.97)) == 0:
         img_rgb = get_all_region()
-        sleep(0.2)
+        sleep(0.1)
 
     for loc in find_letters(template, img_rgb, 0.97):
     # click
         pg.moveTo(loc[0], loc[1], 0.05)
         pg.click()
-        sleep(0.2)
+        sleep(0.1)
 
     log("Scrolling to level "+str(level))
     pg.scroll(LEVEL_BOSS[level][0])
@@ -98,7 +101,7 @@ def open_boss_level(level):
         loc = loc[0]
         pg.moveTo(loc[0] + window_geometry['x'], loc[1] + window_geometry['y'], 0.05)
         pg.click()
-        sleep(0.5)
+        sleep(0.1)
 
         log("Clicking play button")
         while 1:
@@ -116,8 +119,8 @@ def open_boss_level(level):
         wait_for_level()
         return True
     else:
-        sleep(1)
-        pg.scroll(-9999999) 
+        sleep(2)
+        pg.scroll(-100) 
         open_boss_level(level)
 
     
@@ -126,8 +129,8 @@ def open_boss_level(level):
 def play_level():
 
     # open boss level
-    # level = random.choice([15, 20, 25, 30])
-    open_boss_level(15)
+    level = level_cycle.__next__()
+    open_boss_level(level)
 
 
     all_region = get_all_region()
@@ -172,8 +175,10 @@ def play_level():
                     break 
     # find submit button
         submitted = False
-        counter = 5
+        counter = 2
+        done = False
         while not submitted:
+            sleep(0.15)
             input_region = get_all_region()
             if counter == 0:
                 break
@@ -181,93 +186,88 @@ def play_level():
             submit_locs = find_letters(submit_template, input_region, offset=5)
             if len(submit_locs) > 0:
                 submit_loc = submit_locs[0]
-                print("Submitted word: "+word)
                 pg.moveTo(submit_loc[0] + window_geometry['x'], submit_loc[1] + window_geometry['y'], LETTER_DELAY)
                 pg.click()
                 submitted = True
-            sleep(0.25)
             counter -= 1
-        done = False
-        mult = 1
-        while not submitted:
-            submit_template = cv2.imread('letters/!reset.png')
-            submit_locs = find_letters(submit_template, input_region, offset=5)
-            if len(submit_locs) > 0:
-                submit_loc = submit_locs[0]
-                print("Submitted word: "+word)
-                pg.moveTo(submit_loc[0] + window_geometry['x'], submit_loc[1] + window_geometry['y'], LETTER_DELAY)
-                pg.click()
-                submitted = True
-                mult = 0.1
-            
-            screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
-            all_region = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-
-
 
             ok_template = cv2.imread('letters/go_to_map.png')
-            ok_locs = find_letters(ok_template, all_region)
+            ok_locs = find_letters(ok_template, input_region)
             if len(ok_locs) > 0:
                 ok_loc = ok_locs[0]
                 log("Go to map button found!")
                 pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], LETTER_DELAY)
                 pg.click()
                 done = True
+                submitted = True
                 break
         
             ok_template = cv2.imread('letters/!ok.png')
-            ok_locs = find_letters(ok_template, all_region)
+            ok_locs = find_letters(ok_template, input_region)
             if len(ok_locs) > 0:
                 ok_loc = ok_locs[0]
                 log("OK button found!")
                 pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], LETTER_DELAY)
                 pg.click()
             
-                    
+        mult = 0.1
+        while not submitted:
+            submit_template = cv2.imread('letters/!reset.png')
+            submit_locs = find_letters(submit_template, input_region, offset=5)
+            if len(submit_locs) > 0:
+                submit_loc = submit_locs[0]
+                pg.moveTo(submit_loc[0] + window_geometry['x'], submit_loc[1] + window_geometry['y'], LETTER_DELAY)
+                pg.click()
+                submitted = True
+                mult = 0.
+            
         if done:
             break
 
 
         sleep(len(word)*0.22 * mult)
     
-        screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
-        all_region = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+        # screenshot = pg.screenshot(region=(window_geometry['x'], window_geometry['y'], window_geometry['width'], window_geometry['height']))
+        # all_region = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 
     # check if done by finding ok button
                 
-        ok_template = cv2.imread('letters/!ok.png')
-        ok_locs = find_letters(ok_template, all_region)
-        if len(ok_locs) > 0:
-            ok_loc = ok_locs[0]
-            print("Done!")
-            pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], LETTER_DELAY)
-            pg.click()
+        # ok_template = cv2.imread('letters/!ok.png')
+        # ok_locs = find_letters(ok_template, all_region)
+        # if len(ok_locs) > 0:
+        #     ok_loc = ok_locs[0]
+        #     print("Done!")
+        #     pg.moveTo(ok_loc[0] + window_geometry['x'], ok_loc[1] + window_geometry['y'], LETTER_DELAY)
+        #     pg.click()
         
 
 
-        # check if done by finding next button
-        next_template = cv2.imread('letters/!play.png')
-        next_locs = find_letters(next_template, all_region)
-        if len(next_locs) > 0:
-            next_loc = next_locs[0]
-            print("Done!")
-            pg.moveTo(next_loc[0] + window_geometry['x'], next_loc[1] + window_geometry['y'], LETTER_DELAY)
-            pg.click()
-            break
+        # # check if done by finding next button
+        # next_template = cv2.imread('letters/!play.png')
+        # next_locs = find_letters(next_template, all_region)
+        # if len(next_locs) > 0:
+        #     next_loc = next_locs[0]
+        #     print("Done!")
+        #     pg.moveTo(next_loc[0] + window_geometry['x'], next_loc[1] + window_geometry['y'], LETTER_DELAY)
+        #     pg.click()
+        #     break
 
 if __name__ == "__main__":
     time_start = datetime.now()
     total = 0
     log("Time started: "+str(time_start))
     # do for 15 minutes, last point was 114
-    while (datetime.now() - time_start).seconds < 60*15:
+    while (datetime.now() - time_start).seconds < 60*60*4:
         try:
             time_start_level = datetime.now()
             play_level()
             total +=1
-            log("Time spent for this level: "+str((datetime.now()- time_start_level)//60)+" minutes" + str((datetime.now()- time_start_level)%60)+" seconds")
-            print(f"{total} level done!")
-            
+            print("="*20)
+            log("Total time: ", str((datetime.now()- time_start).seconds//60)+" minutes " + str((datetime.now()- time_start).seconds%60)+" seconds")
+            log("Time spent for this level: "+str((datetime.now()- time_start_level).seconds//60)+" minutes " + str((datetime.now()- time_start_level).seconds%60)+" seconds")
+            log(f"{total} level done!")
+            print("="*20)
+
         except Exception as e:
             print(e)
             sleep(1)

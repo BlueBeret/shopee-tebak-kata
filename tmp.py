@@ -20,10 +20,10 @@ for loc in find_letters(template, img_rgb, 0.97):
 pg.scroll(25) # buat ke 25
 time.sleep(0.3)
 
-template = cv2.imread('letters/30.png')
+template = cv2.imread('letters/25.png')
 img_rgb = get_all_region()
 
-for loc in find_letters(template, img_rgb, 0.99, offset=10):
+for loc in find_letters(template, img_rgb, 0.99, offset=15):
     # click
     pg.moveTo(loc[0], loc[1], 0.05)
     time.sleep(0.5)
